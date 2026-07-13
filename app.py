@@ -98,7 +98,7 @@ Este proyecto utiliza Inteligencia Artificial para facilitar ese proceso y apoya
 
 ### Visión
 
-Este prototipo evolucionará hacia una plataforma integral de inteligencia comercial que ademas de proporcionar información abra un canal de comunicación entre los productores mexicanos y clientes españoles, y creando oportunidades de negocio para empresas pequeñas y medianas de México mexicanas que desean exportar sus productos.
+Este prototipo evolucionará hacia una plataforma integral de inteligencia comercial que, además de proporcionar información estratégica para la exportación, facilitará la conexión entre productores mexicanos y potenciales compradores en España, generando oportunidades de negocio para las pequeñas y medianas empresas mexicanas interesadas en internacionalizar sus productos.
 """)
 
 pregunta = st.text_input("Escribe un producto:")
@@ -183,6 +183,7 @@ if st.button("Consultar") and pregunta:
             st.info("El producto presenta una penetración relevante en España, por lo que se trata de un mercado ya bien aceptado y con un nivel de madurez considerable.")
         else:
             st.success("Se observa una oportunidad de crecimiento estimado en el mercado español.")
+
 
 
 
