@@ -65,9 +65,41 @@ def obtener_imagen_por_fraccion(fraccion: str) -> str:
 
 st.set_page_config(page_title="Motor de Inteligencia Comercial", layout="centered")
 
-st.title("Motor de Inteligencia Comercial")
-st.image("Images/ramo.jpeg", width="stretch")
-st.title("Enfoque para evaluar exportaciones de México a España con Norteamerica como referencia")
+st.title("🇲🇽 Motor de Inteligencia Comercial")
+
+st.caption(
+    "Facilitando la internacionalización de productos mexicanos hacia España mediante Inteligencia Artificial."
+)
+
+st.image("Images/ramo.jpeg", use_container_width=True)
+
+with st.expander("📖 Sobre el proyecto", expanded=True):
+
+    st.markdown("""
+### ¿Por qué nace este proyecto?
+
+México depende en gran medida del comercio exterior y España representa un mercado con creciente potencial para los productos mexicanos.
+
+Sin embargo, muchas PyMEs enfrentan dificultades para acceder a información sobre aranceles, impuestos, regulaciones y oportunidades comerciales.
+
+Este proyecto utiliza Inteligencia Artificial para facilitar ese proceso y apoyar la toma de decisiones de exportación.
+
+---
+
+### ¿Qué puede hacer?
+
+- Identificar la fracción arancelaria.
+- Consultar impuestos de importación.
+- Analizar exportaciones México–España.
+- Estimar potencial comercial.
+- Facilitar la internacionalización de PyMEs.
+
+---
+
+### Visión
+
+Este prototipo evolucionará hacia una plataforma integral de inteligencia comercial incorporando información logística, regulatoria y oportunidades de negocio para empresas mexicanas que desean exportar a Europa.
+""")
 
 pregunta = st.text_input("Escribe un producto:")
 
@@ -151,4 +183,5 @@ if st.button("Consultar") and pregunta:
             st.info("El producto presenta una penetración relevante en España, por lo que se trata de un mercado ya bien aceptado y con un nivel de madurez considerable.")
         else:
             st.success("Se observa una oportunidad de crecimiento estimado en el mercado español.")
+
 
