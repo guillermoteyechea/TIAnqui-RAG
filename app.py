@@ -65,10 +65,10 @@ def obtener_imagen_por_fraccion(fraccion: str) -> str:
 
 st.set_page_config(page_title="Motor de Inteligencia Comercial", layout="centered")
 
-st.title("🇲🇽 Motor de Inteligencia Comercial")
+st.title("Motor de Inteligencia Comercial")
 
 st.caption(
-    "Facilitando la internacionalización de productos mexicanos hacia España mediante Inteligencia Artificial."
+    "Facilitando la internacionalización de productos mexicanos hacia España mediante IA."
 )
 
 st.image("Images/ramo.jpeg", use_container_width=True)
@@ -78,7 +78,7 @@ with st.expander("📖 Sobre el proyecto", expanded=True):
     st.markdown("""
 ### ¿Por qué nace este proyecto?
 
-México depende en gran medida del comercio exterior y España representa un mercado con creciente potencial para los productos mexicanos.
+México depende en gran medida del comercio exterior y España representa un mercado con creciente potencial para los productos mexicanos. Durante la última década la población mexicana residente en España prácticamente se triplicó, pasando de poco más de 21.000 personas a alrededor de 61.000
 
 Sin embargo, muchas PyMEs enfrentan dificultades para acceder a información sobre aranceles, impuestos, regulaciones y oportunidades comerciales.
 
@@ -98,7 +98,7 @@ Este proyecto utiliza Inteligencia Artificial para facilitar ese proceso y apoya
 
 ### Visión
 
-Este prototipo evolucionará hacia una plataforma integral de inteligencia comercial incorporando información logística, regulatoria y oportunidades de negocio para empresas mexicanas que desean exportar a Europa.
+Este prototipo evolucionará hacia una plataforma integral de inteligencia comercial que ademas de proporcionar información abra un canal de comunicación entre los productores mexicanos y clientes españoles, y creando oportunidades de negocio para empresas pequeñas y medianas de México mexicanas que desean exportar sus productos.
 """)
 
 pregunta = st.text_input("Escribe un producto:")
@@ -183,5 +183,6 @@ if st.button("Consultar") and pregunta:
             st.info("El producto presenta una penetración relevante en España, por lo que se trata de un mercado ya bien aceptado y con un nivel de madurez considerable.")
         else:
             st.success("Se observa una oportunidad de crecimiento estimado en el mercado español.")
+
 
 
