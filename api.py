@@ -2,14 +2,13 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-from rag import responder
-
+# TEMPORAL: desactivamos el RAG para comprobar si Render puede arrancar
+# from rag import responder
 
 app = FastAPI(
     title="tIAnqui API",
     version="1.0.0"
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,10 +18,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 class ProductoRequest(BaseModel):
     producto: str
-
 
 @app.get("/")
 def inicio():
@@ -31,8 +28,10 @@ def inicio():
         "mensaje": "API de tIAnqui funcionando"
     }
 
-
 @app.post("/analizar")
 def analizar_producto(request: ProductoRequest):
-    resultado = responder(request.producto)
-    return resultado
+    return {
+        "ok": True,
+        "mensaje": "API funcionando sin cargar RAG",
+        "producto": request.producto
+    }

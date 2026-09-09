@@ -5,7 +5,6 @@ import re
 
 import pandas as pd
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from openai import OpenAI
@@ -40,6 +39,7 @@ MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 def cargar_api_key(path=APIKEY_PATH):
     with open(path, "r", encoding="utf-8") as f:
         key = f.read().strip()
+
     os.environ["OPENAI_API_KEY"] = key
     return key
 
@@ -49,6 +49,7 @@ def cargar_api_key(path=APIKEY_PATH):
 # =========================
 def llamar_llm(prompt: str, model: str = "gpt-5.4-mini") -> str:
     api_key = os.environ.get("OPENAI_API_KEY")
+
     if not api_key:
         raise ValueError("No se encontró la variable OPENAI_API_KEY.")
 
@@ -102,7 +103,6 @@ Consulta: {consulta_usuario}
         respuesta = llamar_llm(prompt).strip().lower()
         return respuesta.startswith("si")
     except Exception:
-        # fallback: si falla el LLM, dejamos pasar
         return True
 
 
@@ -118,6 +118,7 @@ def clean_text(x):
     text = text.replace("\r", " ")
     text = text.replace("\t", " ")
     text = re.sub(r"\s+", " ", text)
+
     return text
 
 
@@ -145,7 +146,12 @@ def estimar_potencial_exportacion(valor_norte_america, valor_espana):
     gasto_norte_america = valor_norte_america / poblacion_norte_america
     gasto_espana = valor_espana / poblacion_espana if poblacion_espana else 0.0
 
-    indice_actual = gasto_espana / gasto_norte_america if gasto_norte_america else 0.0
+    indice_actual = (
+        gasto_espana / gasto_norte_america
+        if gasto_norte_america
+        else 0.0
+    )
+
     indice_oportunidad = 1 - indice_actual
 
     valor_potencial = gasto_norte_america * poblacion_espana
@@ -163,7 +169,10 @@ def estimar_potencial_exportacion(valor_norte_america, valor_espana):
 
 def obtener_valor_por_pais(datos_fraccion, pais_objetivo):
     pais_objetivo = clean_text(pais_objetivo)
-    datos_pais = datos_fraccion[datos_fraccion["pais"] == pais_objetivo]
+
+    datos_pais = datos_fraccion[
+        datos_fraccion["pais"] == pais_objetivo
+    ]
 
     if datos_pais.empty:
         return 0.0
@@ -171,8 +180,14 @@ def obtener_valor_por_pais(datos_fraccion, pais_objetivo):
     return float(datos_pais["valor_exportado"].sum())
 
 
-def buscar_exportaciones_por_fraccion(fraccion_consulta, exportaciones):
-    resultados = exportaciones[exportaciones["fraccion"] == fraccion_consulta].copy()
+def buscar_exportaciones_por_fraccion(
+    fraccion_consulta,
+    exportaciones
+):
+    resultados = exportaciones[
+        exportaciones["fraccion"] == fraccion_consulta
+    ].copy()
+
     return resultados
 
 
@@ -181,12 +196,14 @@ def buscar_exportaciones_por_fraccion(fraccion_consulta, exportaciones):
 # =========================
 def generar_embeddings_tax(model, textos):
     print("Generando embeddings...")
+
     embeddings = model.encode(
         textos,
         convert_to_numpy=True,
         normalize_embeddings=True,
         show_progress_bar=True
     )
+
     return embeddings
 
 
@@ -213,103 +230,160 @@ def cargar_o_generar_embeddings(model, textos):
         }, f)
 
     print("Embeddings guardados en cache.")
+
     return embeddings
 
 
 # =========================
 # Búsqueda semántica
 # =========================
-
-def buscar_con_sbert_tax(consulta, base, model, embeddings, top_k=5, umbral=0.65):
+def buscar_con_sbert_tax(
+    consulta,
+    base,
+    model,
+    embeddings,
+    top_k=5,
+    umbral=0.65
+):
     consulta_limpia = clean_text(consulta)
 
-    # Usa la misma columna con la que generaste embeddings, si existe
     if "texto_busqueda" in base.columns:
         textos = base["texto_busqueda"].map(clean_text).tolist()
     else:
         textos = [
-            f"{clean_text(base.iloc[i]['uso'])} {clean_text(base.iloc[i]['fraccion'])}"
+            (
+                f"{clean_text(base.iloc[i]['uso'])} "
+                f"{clean_text(base.iloc[i]['fraccion'])}"
+            )
             for i in range(len(base))
         ]
 
     usos = base["uso"].map(clean_text).tolist()
 
-    # 1. Coincidencia exacta contra USO, no contra fraccion + uso
-    exact_idx = [i for i, uso in enumerate(usos) if uso == consulta_limpia]
+    # 1. Coincidencia exacta
+    exact_idx = [
+        i
+        for i, uso in enumerate(usos)
+        if uso == consulta_limpia
+    ]
 
     if exact_idx:
         idx = exact_idx[:top_k]
+
         resultados = base.iloc[idx].copy()
         resultados["score"] = 1.0
+
         return resultados
 
-    # 2. Coincidencia por palabra, pero ordenada por prioridad
+    # 2. Coincidencia por palabra
     palabra_idx = [
-        i for i, uso in enumerate(usos)
-        if re.search(rf"\b{re.escape(consulta_limpia)}\b", uso)
+        i
+        for i, uso in enumerate(usos)
+        if re.search(
+            rf"\b{re.escape(consulta_limpia)}\b",
+            uso
+        )
     ]
 
     if palabra_idx:
+
         def prioridad(i):
             uso = usos[i]
 
             if uso == consulta_limpia:
                 return 0
+
             if uso.startswith(consulta_limpia + " "):
                 return 1
+
             if consulta_limpia in uso:
                 return 2
+
             return 3
 
-        idx = sorted(palabra_idx, key=prioridad)[:top_k]
+        idx = sorted(
+            palabra_idx,
+            key=prioridad
+        )[:top_k]
 
         resultados = base.iloc[idx].copy()
-        resultados["score"] = [0.98 - (0.01 * prioridad(i)) for i in idx]
+
+        resultados["score"] = [
+            0.98 - (0.01 * prioridad(i))
+            for i in idx
+        ]
+
         return resultados
 
-    # 3. Coincidencia aproximada, también ordenada
+    # 3. Coincidencia aproximada
     aprox_idx = [
-        i for i, uso in enumerate(usos)
-        if uso.startswith(consulta_limpia)
-        or uso.startswith(consulta_limpia + "s")
-        or consulta_limpia in uso
+        i
+        for i, uso in enumerate(usos)
+        if (
+            uso.startswith(consulta_limpia)
+            or uso.startswith(consulta_limpia + "s")
+            or consulta_limpia in uso
+        )
     ]
 
     if aprox_idx:
+
         def prioridad_aprox(i):
             uso = usos[i]
 
             if uso.startswith(consulta_limpia):
                 return 0
+
             if consulta_limpia in uso:
                 return 1
+
             return 2
 
-        idx = sorted(aprox_idx, key=prioridad_aprox)[:top_k]
+        idx = sorted(
+            aprox_idx,
+            key=prioridad_aprox
+        )[:top_k]
 
         resultados = base.iloc[idx].copy()
-        resultados["score"] = [0.93 - (0.01 * prioridad_aprox(i)) for i in idx]
+
+        resultados["score"] = [
+            0.93 - (0.01 * prioridad_aprox(i))
+            for i in idx
+        ]
+
         return resultados
 
-    # 4. Fallback semántico con SBERT
+    # 4. Fallback semántico SBERT
     consulta_emb = model.encode(
         [consulta_limpia],
         convert_to_numpy=True,
         normalize_embeddings=True
     )
 
-    scores = cosine_similarity(consulta_emb, embeddings)[0]
+    scores = cosine_similarity(
+        consulta_emb,
+        embeddings
+    )[0]
+
     idx_ordenado = np.argsort(scores)[::-1]
-    idx_filtrado = [i for i in idx_ordenado if scores[i] >= umbral]
+
+    idx_filtrado = [
+        i
+        for i in idx_ordenado
+        if scores[i] >= umbral
+    ]
 
     if not idx_filtrado:
         resultados = base.iloc[0:0].copy()
         resultados["score"] = []
+
         return resultados
 
     idx = idx_filtrado[:top_k]
+
     resultados = base.iloc[idx].copy()
     resultados["score"] = scores[idx]
+
     return resultados
 
 
@@ -317,23 +391,51 @@ def buscar_con_sbert_tax(consulta, base, model, embeddings, top_k=5, umbral=0.65
 # Inicialización UNA vez
 # =========================
 def inicializar_rag():
-    global RAG_INICIALIZADO, MODEL_REF, TAX_REF, EXPORTACIONES_REF, EMBEDDINGS_REF
+    global RAG_INICIALIZADO
+    global MODEL_REF
+    global TAX_REF
+    global EXPORTACIONES_REF
+    global EMBEDDINGS_REF
 
     if RAG_INICIALIZADO:
         return
+
+    print("Inicializando RAG...")
 
     CACHE_DIR.mkdir(exist_ok=True)
 
     if APIKEY_PATH.exists():
         cargar_api_key()
 
+    # Import pesado SOLO cuando llega la primera consulta.
+    # Así Render puede levantar FastAPI/Uvicorn sin cargar PyTorch.
+    print("Cargando SentenceTransformer...")
+
+    from sentence_transformers import SentenceTransformer
+
     model = SentenceTransformer(MODEL_NAME)
 
-    tax = pd.read_csv(TAX_PATH, sep=";")
-    exportaciones = pd.read_csv(EXPORT_PATH, sep=";")
+    print("Cargando archivos de datos...")
 
-    tax.columns = [str(c).strip() for c in tax.columns]
-    exportaciones.columns = [str(c).strip() for c in exportaciones.columns]
+    tax = pd.read_csv(
+        TAX_PATH,
+        sep=";"
+    )
+
+    exportaciones = pd.read_csv(
+        EXPORT_PATH,
+        sep=";"
+    )
+
+    tax.columns = [
+        str(c).strip()
+        for c in tax.columns
+    ]
+
+    exportaciones.columns = [
+        str(c).strip()
+        for c in exportaciones.columns
+    ]
 
     tax = tax.rename(columns={
         "Fracción": "fraccion",
@@ -349,21 +451,41 @@ def inicializar_rag():
 
     tax["fraccion"] = tax["fraccion"].map(clean_text)
     tax["uso"] = tax["uso"].map(clean_text)
-    tax["impuesto_importacion"] = tax["impuesto_importacion"].map(clean_text)
 
-    exportaciones["fraccion"] = exportaciones["fraccion"].map(clean_text)
-    exportaciones["pais"] = exportaciones["pais"].map(clean_text)
-    exportaciones["valor_exportado"] = exportaciones["valor_exportado"].map(clean_money)
+    tax["impuesto_importacion"] = (
+        tax["impuesto_importacion"].map(clean_text)
+    )
 
-    tax["texto_busqueda"] = tax["uso"].map(clean_text)
-    textos_tax = tax["texto_busqueda"].tolist()
+    exportaciones["fraccion"] = (
+        exportaciones["fraccion"].map(clean_text)
+    )
 
-    embeddings_tax = cargar_o_generar_embeddings(model, textos_tax)
+    exportaciones["pais"] = (
+        exportaciones["pais"].map(clean_text)
+    )
+
+    exportaciones["valor_exportado"] = (
+        exportaciones["valor_exportado"].map(clean_money)
+    )
+
+    tax["texto_busqueda"] = (
+        tax["uso"].map(clean_text)
+    )
+
+    textos_tax = (
+        tax["texto_busqueda"].tolist()
+    )
+
+    embeddings_tax = cargar_o_generar_embeddings(
+        model,
+        textos_tax
+    )
 
     MODEL_REF = model
     TAX_REF = tax
     EXPORTACIONES_REF = exportaciones
     EMBEDDINGS_REF = embeddings_tax
+
     RAG_INICIALIZADO = True
 
     print("RAG inicializado correctamente.")
@@ -375,15 +497,17 @@ def inicializar_rag():
 def consultar_producto_web(consulta_usuario: str):
     inicializar_rag()
 
-    # =========================
-    # VALIDACIÓN DE PRODUCTO
-    # =========================
     if not es_producto_valido(consulta_usuario):
         return {
             "ok": False,
             "consulta_original": consulta_usuario,
             "consulta_interpretada": "",
-            "mensaje": "Tu consulta no parece corresponder a una fruta, verdura, hortaliza o bebida identificable en la base. Por favor, vuelve a escribir el nombre del producto que deseas analizar.",
+            "mensaje": (
+                "Tu consulta no parece corresponder a una fruta, "
+                "verdura, hortaliza o bebida identificable en la base. "
+                "Por favor, vuelve a escribir el nombre del producto "
+                "que deseas analizar."
+            ),
             "resultados": [],
             "fraccion_seleccionada": "",
             "valor_norte_america": 0.0,
@@ -392,9 +516,13 @@ def consultar_producto_web(consulta_usuario: str):
         }
 
     try:
-        consulta_mejorada = reescribir_consulta_con_llm(consulta_usuario)
+        consulta_mejorada = reescribir_consulta_con_llm(
+            consulta_usuario
+        )
     except Exception:
-        consulta_mejorada = clean_text(consulta_usuario)
+        consulta_mejorada = clean_text(
+            consulta_usuario
+        )
 
     tax = TAX_REF
     model = MODEL_REF
@@ -409,15 +537,18 @@ def consultar_producto_web(consulta_usuario: str):
         top_k=5
     )
 
-
-
-
-    if resultados_tax.empty or float(resultados_tax.iloc[0]["score"]) < 0.65:
+    if (
+        resultados_tax.empty
+        or float(resultados_tax.iloc[0]["score"]) < 0.65
+    ):
         return {
             "ok": False,
             "consulta_original": consulta_usuario,
             "consulta_interpretada": consulta_mejorada,
-            "mensaje": "No se encontraron coincidencias suficientemente confiables.",
+            "mensaje": (
+                "No se encontraron coincidencias "
+                "suficientemente confiables."
+            ),
             "resultados": [],
             "fraccion_seleccionada": "",
             "valor_norte_america": 0.0,
@@ -425,7 +556,9 @@ def consultar_producto_web(consulta_usuario: str):
             "metricas": None
         }
 
-    fraccion_seleccionada = resultados_tax.iloc[0]["fraccion"]
+    fraccion_seleccionada = (
+        resultados_tax.iloc[0]["fraccion"]
+    )
 
     datos_exportacion = buscar_exportaciones_por_fraccion(
         fraccion_seleccionada,
@@ -452,12 +585,15 @@ def consultar_producto_web(consulta_usuario: str):
         "consulta_original": consulta_usuario,
         "consulta_interpretada": consulta_mejorada,
         "mensaje": "Consulta procesada correctamente.",
-        "resultados": resultados_tax.to_dict(orient="records"),
+        "resultados": resultados_tax.to_dict(
+            orient="records"
+        ),
         "fraccion_seleccionada": fraccion_seleccionada,
         "valor_norte_america": valor_norte_america,
         "valor_espana": valor_espana,
         "metricas": resultado_estimacion
     }
+
 
 def responder(pregunta: str):
     return consultar_producto_web(pregunta)
