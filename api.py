@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-# TEMPORAL: desactivamos el RAG para comprobar si Render puede arrancar
-# from rag import responder
+# PRUEBA TEMPORAL:
+# Importamos rag.py, pero NO ejecutamos todavía responder()
+# ni inicializamos el modelo SBERT.
+import rag
 
 app = FastAPI(
     title="tIAnqui API",
@@ -18,20 +20,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class ProductoRequest(BaseModel):
     producto: str
+
 
 @app.get("/")
 def inicio():
     return {
         "ok": True,
-        "mensaje": "API de tIAnqui funcionando"
+        "mensaje": "API de tIAnqui funcionando con módulo RAG importado"
     }
+
 
 @app.post("/analizar")
 def analizar_producto(request: ProductoRequest):
     return {
         "ok": True,
-        "mensaje": "API funcionando sin cargar RAG",
+        "mensaje": "API funcionando con RAG importado, pero sin ejecutar el modelo",
         "producto": request.producto
     }
