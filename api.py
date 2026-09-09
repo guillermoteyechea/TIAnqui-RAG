@@ -2,15 +2,19 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-# PRUEBA TEMPORAL:
-# Importamos rag.py, pero NO ejecutamos todavía responder()
-# ni inicializamos el modelo SBERT.
 import rag
+
+# PRUEBA TEMPORAL:
+# Cargamos la librería sentence-transformers,
+# pero NO cargamos todavía el modelo SBERT.
+from sentence_transformers import SentenceTransformer
+
 
 app = FastAPI(
     title="tIAnqui API",
     version="1.0.0"
 )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,7 +33,7 @@ class ProductoRequest(BaseModel):
 def inicio():
     return {
         "ok": True,
-        "mensaje": "API de tIAnqui funcionando con módulo RAG importado"
+        "mensaje": "API funcionando con sentence-transformers importado"
     }
 
 
@@ -37,6 +41,6 @@ def inicio():
 def analizar_producto(request: ProductoRequest):
     return {
         "ok": True,
-        "mensaje": "API funcionando con RAG importado, pero sin ejecutar el modelo",
+        "mensaje": "SentenceTransformer importado, modelo todavía no cargado",
         "producto": request.producto
     }
